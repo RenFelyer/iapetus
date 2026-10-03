@@ -1,0 +1,115 @@
+# Сквозной стенд на настоящих программах: orbit server и контейнеры session — внутри dind, runner и worker — снаружи,
+# вместо Anthropic — поддельный Messages API (тоже в dind: контейнеры session резолвят имена только во вложенной
+# сети). Сеть без выхода наружу, порты не публикуются. Запуск и порядок шагов — в `docker/e2e.sh`; сам по себе `up` стенд не соберёт: образы грузятся в dind, server поднимается в нём.
+#   docker/e2e.sh            # сборка, запуск, сценарий; варианты запуска — в шапке скрипта
+name: ${E2E_PROJECT:-iapetus-e2e}
+
+networks:
+  default:
+    internal: true
+
+services:
+  # Docker для server и session. Не rootless: dind от root с `privileged`, зато без внешних зависимостей. Server и
+  # session работают во вложенном Docker под тем же шаблоном контейнера, что и на настоящем хосте. Алиас
+  # `orbit-server` — имя, под которым server виден узлам: оно в принципалах его хост-сертификата.
+  dind:
+    image: docker:dind
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+    networks:
+      default:
+        aliases:
+          - orbit-server
+    volumes:
+      - dind-data:/var/lib/docker
+      - shared:/shared
+      - ./e2e:/e2e:ro
+      - ${E2E_CONTROL:?}:/control
+    healthcheck:
+      test: ["CMD", "docker", "info"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+
+  runner-a:
+    profiles: ["runners"]
+    image: ${E2E_RUNNER_IMAGE:-iapetus-e2e-runner}
+    pull_policy: never
+    hostname: runner-a
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        echo "hello from runner" > /workspace/hello.txt
+        mkdir -p /home/waldo/plain /home/waldo/homeproj /home/waldo/.claude
+        echo "home outside" > /home/waldo/outside.txt
+        echo "runner-secret" > /home/waldo/.claude/secret.txt
+        echo "claude-md-seen-by-agent" > /home/waldo/CLAUDE.md
+        echo linked > /home/waldo/homeproj/target.txt
+        ln -sf target.txt /home/waldo/homeproj/link.txt
+        if [ ! -d /home/waldo/repo/.git ]; then
+            mkdir -p /home/waldo/repo
+            cd /home/waldo/repo
+            git init -q -b main
+            echo base > base.txt
+            git add base.txt
+            git -c user.name=e2e -c user.email=e2e@example.com commit -q -m base
+            cd /workspace
+        fi
+        IAPETUS_ORBIT_KEY="$$(cat /shared/orbit_key)" exec waldo runner /workspace
+    environment:
+      IAPETUS_ORBIT_URL: orbit-server:2200
+      IAPETUS_ORBIT_CA: /shared/ssh-ca.pub
+      IAPETUS_NAME: runner-a
+      RUST_LOG: debug
+    volumes:
+      - shared:/shared:ro
+      - workspace-a:/workspace
+      - home-a:/home/waldo
+
+  runner-b:
+    profiles: ["runners"]
+    image: ${E2E_RUNNER_IMAGE:-iapetus-e2e-runner}
+    pull_policy: never
+    hostname: runner-b
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        mkdir -p /workspace/b
+        echo "marker from runner-b" > /workspace/b/marker.txt
+        IAPETUS_ORBIT_KEY="$$(cat /shared/orbit_key)" exec waldo runner /workspace/b
+    environment:
+      IAPETUS_ORBIT_URL: orbit-server:2200
+      IAPETUS_ORBIT_CA: /shared/ssh-ca.pub
+      IAPETUS_NAME: runner-b
+      RUST_LOG: debug
+    volumes:
+      - shared:/shared:ro
+      - workspace-b:/workspace
+
+  # Драйвер сценария: waldo worker в pty, экран разбирается эмулятором терминала.
+  driver:
+    profiles: ["driver"]
+    build:
+      context: ..
+      dockerfile: docker/e2e/Dockerfile.driver
+      args:
+        RUNNER_IMAGE: ${E2E_RUNNER_IMAGE:-iapetus-e2e-runner}
+    image: ${E2E_PROJECT:-iapetus-e2e}-driver
+    volumes:
+      - ./e2e/driver.py:/e2e/driver.py:ro
+      - shared:/shared:ro
+      - workspace-a:/ws-a:ro
+      - workspace-b:/ws-b:ro
+      - home-a:/home-a:ro
+      - ${E2E_CONTROL:?}:/control
+    environment:
+      E2E_RESULTS: /tmp/results
+      E2E_STEP: ${E2E_STEP:-}
+
+volumes:
+  dind-data:
+  shared:
+  workspace-a:
+  workspace-b:
+  home-a:

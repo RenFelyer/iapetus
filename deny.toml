@@ -1,0 +1,31 @@
+# Проверка зависимостей: `cargo deny check`. Ловит уязвимые, заброшенные, отозванные
+# и неизвестного происхождения крейты — то, что не видят rustc и clippy.
+
+[graph]
+targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
+
+[advisories]
+# Уязвимости, заброшенные и unsound-крейты из базы RustSec — ошибка для всего графа.
+unmaintained = "all"
+unsound = "all"
+yanked = "deny"
+ignore = []
+
+[licenses]
+# Свои крейты не публикуются и лицензии не указывают.
+private = { ignore = true }
+# Только разрешительные лицензии; проект распространяется под 0BSD.
+allow = ["Apache-2.0", "BSD-3-Clause", "CC0-1.0", "ISC", "MIT", "MIT-0", "Unicode-3.0", "Unlicense", "Zlib"]
+confidence-threshold = 0.9
+# Лишняя лицензия в списке — ошибка: список разрешённых не шире того, что реально пришло с зависимостями.
+unused-allowed-license = "deny"
+
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

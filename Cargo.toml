@@ -1,0 +1,197 @@
+[workspace]
+members = ["nerve", "orbit", "waldo"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+publish = false
+license = "0BSD"
+description = "Coding agent in a Docker sandbox, environment on the developer machine: FUSE, SSH, Rust"
+repository = "https://github.com/RenFelyer/iapetus"
+
+[workspace.dependencies]
+nerve = { path = "nerve" }
+anyhow = "1.0.104"
+clap = { version = "4.6.7", features = ["derive", "env"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.151", features = ["preserve_order"] }
+tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "signal", "net", "sync", "time", "io-util", "io-std", "fs"] }
+postcard = { version = "1.1.3", default-features = false, features = ["use-std"] }
+tempfile = "3.27.0"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+axum = { version = "0.8.9", default-features = false, features = ["http1", "tokio"] }
+rmcp = { version = "3.5.0", default-features = false, features = ["server", "macros", "transport-streamable-http-server", "schemars"] }
+futures-util = { version = "0.3.34", default-features = false, features = ["std"] }
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "stream"] }
+hyper = { version = "1.11.1", default-features = false, features = ["http1", "client", "server"] }
+hyper-util = { version = "0.1.21", default-features = false, features = ["tokio"] }
+http-body-util = "0.1.5"
+bytes = "1.12.1"
+proptest = "1.11.0"
+insta = "1.48.0"
+proptest-derive = "0.8.0"
+# Без websockets: он тянет webpki-roots с лицензией CDLA, которой нет в deny.toml.
+rustix = { version = "1.1.5", features = ["event", "fs", "std", "thread", "process", "mount", "system"] }
+fuser = "0.18.0"
+# pty агента без unsafe в своём коде и эмулятор экрана для копии экрана новому зрителю.
+pty-process = { version = "0.5.3", features = ["async"] }
+vt100 = "0.16.2"
+sha2 = "0.11.0"
+# Проверка подписи PGP выпуска Claude Code: RSA-примитив aws-lc-rs, который уже в графе зависимостей через russh и rustls.
+aws-lc-rs = "1.18.1"
+base64 = "0.22.1"
+hmac = "0.13.0"
+flate2 = "1.1.10"
+brotli = "9.0.0"
+zstd = "0.14.0"
+# Без rsa: крейт rsa уязвим (RUSTSEC-2023-0071), а ключи и сертификаты у нас Ed25519.
+russh = { version = "=0.63.3", default-features = false, features = ["flate2", "aws-lc-rs"] }
+rand = "0.10.3"
+# bundled: SQLite собирается вместе с программой, системная библиотека не нужна.
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+chacha20poly1305 = { version = "0.11.0", features = ["zeroize"] }
+getrandom = "0.4.3"
+# Время сброса квоты Gemini приходит строкой RFC 3339.
+time = { version = "0.3.55", features = ["parsing", "formatting"] }
+# TUI worker: ratatui рисует, crossterm даёт raw-режим, размер окна и события клавиатуры.
+ratatui = "0.30.2"
+crossterm = "0.29.0"
+
+# Уровни lint'ов для всех крейтов; члены подключают их через `[lints] workspace = true`.
+# Предупреждение — ошибка сборки в проверке: `cargo clippy --workspace --all-targets -- -D warnings`.
+[workspace.lints.rust]
+# Устаревший и устаревающий API — ошибка, а не предупреждение.
+deprecated = "deny"
+deprecated_in_future = "deny"
+deprecated_safe_2024 = "deny"
+unsafe_code = "deny"
+non_ascii_idents = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+let_underscore_drop = "warn"
+meta_variable_misuse = "warn"
+missing_debug_implementations = "warn"
+redundant_lifetimes = "warn"
+single_use_lifetimes = "warn"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+unit_bindings = "warn"
+unnameable_types = "warn"
+unreachable_pub = "warn"
+unused_import_braces = "warn"
+unused_lifetimes = "warn"
+unused_macro_rules = "warn"
+unused_qualifications = "warn"
+ambiguous_negative_literals = "warn"
+impl_trait_redundant_captures = "warn"
+macro_use_extern_crate = "warn"
+redundant_imports = "warn"
+unused_extern_crates = "warn"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+# Метаданные публикации не нужны: крейты не публикуются.
+cargo_common_metadata = "allow"
+# Дубли версий приходят транзитивно, своими зависимостями их не убрать.
+multiple_crate_versions = "allow"
+# Документировать ошибки и паники каждой функции — шум; неочевидное объясняет комментарий.
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+must_use_candidate = "allow"
+# Выборочно из nursery: лишние клоны и вычисления, ошибки с ветвлением и границами.
+branches_sharing_code = "warn"
+debug_assert_with_mut_call = "warn"
+derive_partial_eq_without_eq = "warn"
+imprecise_flops = "warn"
+iter_on_single_items = "warn"
+iter_with_drain = "warn"
+literal_string_with_formatting_args = "warn"
+needless_collect = "warn"
+nonstandard_macro_braces = "warn"
+or_fun_call = "warn"
+path_buf_push_overwrite = "warn"
+read_zero_byte_vec = "warn"
+redundant_clone = "warn"
+set_contains_or_insert = "warn"
+suboptimal_flops = "warn"
+suspicious_operation_groupings = "warn"
+trait_duplication_in_bounds = "warn"
+type_repetition_in_bounds = "warn"
+unused_peekable = "warn"
+unused_rounding = "warn"
+use_self = "warn"
+useless_let_if_seq = "warn"
+while_float = "warn"
+# Выборочно из restriction.
+allow_attributes = "warn"
+allow_attributes_without_reason = "warn"
+cfg_not_test = "deny"
+clone_on_ref_ptr = "warn"
+dbg_macro = "deny"
+deref_by_slicing = "warn"
+empty_drop = "warn"
+empty_enum_variants_with_brackets = "warn"
+empty_structs_with_brackets = "warn"
+exit = "deny"
+expect_used = "warn"
+filetype_is_file = "warn"
+float_cmp_const = "warn"
+format_push_string = "warn"
+get_unwrap = "warn"
+if_then_some_else_none = "warn"
+infinite_loop = "warn"
+large_include_file = "warn"
+let_underscore_must_use = "warn"
+lossy_float_literal = "warn"
+map_with_unused_argument_over_ranges = "warn"
+mem_forget = "deny"
+missing_assert_message = "warn"
+mixed_read_write_in_expression = "warn"
+mod_module_files = "deny"
+mutex_atomic = "warn"
+panic = "warn"
+pathbuf_init_then_push = "warn"
+precedence_bits = "warn"
+print_stderr = "warn"
+print_stdout = "warn"
+rc_buffer = "warn"
+rc_mutex = "warn"
+redundant_test_prefix = "warn"
+redundant_type_annotations = "warn"
+ref_patterns = "warn"
+rest_pat_in_fully_bound_structs = "warn"
+return_and_then = "warn"
+same_name_method = "warn"
+str_to_string = "warn"
+string_add = "warn"
+string_lit_chars_any = "warn"
+todo = "deny"
+try_err = "warn"
+undocumented_unsafe_blocks = "deny"
+unimplemented = "deny"
+unnecessary_safety_comment = "warn"
+unnecessary_safety_doc = "warn"
+unnecessary_self_imports = "warn"
+unneeded_field_pattern = "warn"
+unused_result_ok = "warn"
+unwrap_used = "warn"
+verbose_file_reads = "warn"
+
+[profile.release]
+# Переполнение целых — паника, а не тихий перенос: надёжность важнее долей процента скорости.
+overflow-checks = true
+lto = "thin"
+codegen-units = 1
+debug = "line-tables-only"
+
+# Ed25519 без оптимизаций проверяет подпись за ~13 мс: на проверках SSH-сертификатов и подписей тесты терялись бы
+# на этом минуты.
+[profile.dev.package.curve25519-dalek]
+opt-level = 3
+
+[profile.dev.package.ed25519-dalek]
+opt-level = 3

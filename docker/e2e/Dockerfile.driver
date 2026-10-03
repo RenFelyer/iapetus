@@ -1,0 +1,9 @@
+# Драйвер стенда e2e: waldo worker из образа runner и эмулятор терминала для разбора его экрана.
+ARG RUNNER_IMAGE=iapetus-e2e-runner
+FROM ${RUNNER_IMAGE}
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 python3-pexpect python3-pyte \
+    && rm -rf /var/lib/apt/lists/*
+USER waldo
+ENTRYPOINT ["python3", "-u", "/e2e/driver.py"]

@@ -1,0 +1,115 @@
+# Локальная среда разработки.
+#   docker compose -f docker/docker-compose.dev.yml up --build
+#   docker compose -f docker/docker-compose.dev.yml --profile session up --build orbit-session
+# Остановка с удалением томов:
+#   docker compose -f docker/docker-compose.dev.yml down -v
+name: iapetus-dev
+
+# Узлам server виден в сети nodes, session — в сети sessions. Слушатели привязаны к адресам server в своих сетях, поэтому
+# контейнер session не достаёт до внешнего порта 2200.
+networks:
+  nodes:
+    ipam:
+      config:
+        - subnet: 172.28.10.0/24
+  sessions:
+    ipam:
+      config:
+        - subnet: 172.28.11.0/24
+
+services:
+  orbit-server:
+    build:
+      context: ..
+      dockerfile: orbit/Dockerfile
+      target: server
+    networks:
+      nodes:
+        ipv4_address: 172.28.10.10
+      sessions:
+        ipv4_address: 172.28.11.10
+    environment:
+      # Внешний слушатель SSH для узлов: адрес сети nodes.
+      IAPETUS_LISTEN: 172.28.10.10:2200
+      # Внутренний слушатель SSH для session: адрес сети sessions, порт наружу не публикуется.
+      IAPETUS_INTERNAL_LISTEN: 172.28.11.10:2201
+      # Внутренний слушатель MCP для агентов session: адрес сети sessions, порт наружу не публикуется.
+      IAPETUS_MCP_LISTEN: 172.28.11.10:2202
+      RUST_LOG: debug
+    volumes:
+      - orbit-data:/var/lib/orbit
+
+  # Узел runner: регистрируется при первом запуске по IAPETUS_ORBIT_KEY, затем помнит личность в томе.
+  #   IAPETUS_ORBIT_KEY=... docker compose -f docker/docker-compose.dev.yml --profile runner up --build waldo-runner
+  waldo-runner:
+    profiles: ["runner"]
+    build:
+      context: ..
+      dockerfile: waldo/Dockerfile
+    command: ["runner", "/workspace"]
+    networks:
+      - nodes
+    environment:
+      IAPETUS_ORBIT_URL: orbit-server:2200
+      IAPETUS_ORBIT_KEY: ${IAPETUS_ORBIT_KEY:-}
+      IAPETUS_NAME: runner-dev
+      # `off` — не отдавать сессии $HOME runner (/home/waldo, где лежит и личность узла).
+      IAPETUS_HOME: ${IAPETUS_HOME:-on}
+      # Открытый ключ CA нужно положить в том личности вручную.
+      IAPETUS_ORBIT_CA: /home/waldo/.local/state/iapetus/ca.pub
+      RUST_LOG: debug
+    volumes:
+      - runner-workspace:/workspace
+      - runner-identity:/home/waldo/.local/state/iapetus
+    depends_on:
+      - orbit-server
+
+  # Ручной запуск образа session. В работе контейнеры session поднимает orbit server и выдаёт им fingerprint
+  # и секрет.
+  orbit-session:
+    profiles: ["session"]
+    build:
+      context: ..
+      dockerfile: orbit/Dockerfile
+      target: session
+    devices:
+      - /dev/fuse
+    # Набор шаблона orbit server; он минимален: без любой из четырёх capabilities FUSE не смонтировать или не размонтировать.
+    cap_drop:
+      - ALL
+    cap_add:
+      - SYS_ADMIN
+      - SETUID
+      - SETGID
+      - SETPCAP
+    security_opt:
+      - no-new-privileges
+    networks:
+      - sessions
+    tmpfs:
+      - /work:rw,noexec,nosuid,nodev,mode=0700,size=1g
+      - /run/secrets:rw,noexec,nosuid,nodev,mode=0700,size=1m
+    environment:
+      IAPETUS_ORBIT_URL: orbit-server:2201
+      IAPETUS_AGENT: claude
+      IAPETUS_SESSION: ${IAPETUS_SESSION:-}
+      IAPETUS_SESSION_SECRET_FILE: /run/iapetus/session-secret
+      IAPETUS_RUNNER: runner-dev
+      # Ключ и хост-сертификат канала данных и открытый ключ CA кладутся в том вручную.
+      IAPETUS_DATA_HOST_KEY: /identity/session-key
+      IAPETUS_DATA_HOST_CERT: /identity/session-key-cert.pub
+      IAPETUS_CA_PUBLIC_KEY: /identity/ca.pub
+      RUST_LOG: debug
+    volumes:
+      - session-state:/home/agent/.claude
+      - ${IAPETUS_SESSION_SECRET_FILE:-/dev/null}:/run/iapetus/session-secret:ro
+      - session-identity:/identity:ro
+    depends_on:
+      - orbit-server
+
+volumes:
+  orbit-data:
+  runner-workspace:
+  runner-identity:
+  session-state:
+  session-identity:

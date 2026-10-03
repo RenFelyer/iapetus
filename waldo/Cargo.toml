@@ -1,0 +1,38 @@
+[package]
+name = "waldo"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+# Файлы tests/ — тесты модулей, подключённые из src/; отдельными тестами идут только перечисленные [[test]].
+autotests = false
+
+[dependencies]
+anyhow.workspace = true
+bytes.workspace = true
+clap.workspace = true
+crossterm.workspace = true
+nerve.workspace = true
+rand.workspace = true
+ratatui.workspace = true
+reqwest.workspace = true
+russh.workspace = true
+rustix.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["process"] }
+tracing.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+proptest-derive.workspace = true
+proptest.workspace = true
+tokio = { workspace = true, features = ["test-util", "process"] }
+tracing-subscriber.workspace = true
+
+[lints]
+workspace = true

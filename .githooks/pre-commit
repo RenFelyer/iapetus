@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Коммит с неотформатированным Rust не проходит. Подключение в рабочей копии: git config core.hooksPath .githooks
+set -euo pipefail
+
+git diff --cached --quiet --diff-filter=ACMR -- '*.rs' && exit 0
+if ! cargo fmt --all --check >/dev/null; then
+    echo "pre-commit: Rust не отформатирован — запусти cargo fmt --all" >&2
+    exit 1
+fi

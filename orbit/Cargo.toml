@@ -1,0 +1,60 @@
+[package]
+name = "orbit"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+# Файлы tests/ — тесты модулей, подключённые из src/; отдельными тестами идут только перечисленные [[test]].
+autotests = false
+
+[[test]]
+name = "drop_exec"
+path = "tests/drop_exec/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+aws-lc-rs.workspace = true
+axum.workspace = true
+base64.workspace = true
+brotli.workspace = true
+bytes.workspace = true
+chacha20poly1305.workspace = true
+clap.workspace = true
+flate2.workspace = true
+fuser.workspace = true
+futures-util.workspace = true
+getrandom.workspace = true
+hmac.workspace = true
+http-body-util.workspace = true
+hyper-util.workspace = true
+hyper.workspace = true
+nerve.workspace = true
+postcard.workspace = true
+pty-process.workspace = true
+rand.workspace = true
+reqwest.workspace = true
+rmcp.workspace = true
+rusqlite.workspace = true
+russh.workspace = true
+rustix.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tempfile.workspace = true
+time.workspace = true
+tokio = { workspace = true, features = ["process"] }
+tracing.workspace = true
+vt100.workspace = true
+zstd.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+proptest-derive.workspace = true
+proptest.workspace = true
+tokio = { workspace = true, features = ["test-util", "process"] }
+tracing-subscriber.workspace = true
+
+[lints]
+workspace = true

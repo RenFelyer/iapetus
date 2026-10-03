@@ -1,0 +1,13 @@
+.git
+.claude
+.gitignore
+target
+**/.env
+**/.env.*
+*.md
+docker
+**/Dockerfile
+.dockerignore
+.editorconfig
+.githooks
+scripts

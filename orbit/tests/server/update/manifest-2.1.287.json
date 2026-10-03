@@ -1,0 +1,20 @@
+{
+  "version": "2.1.287",
+  "platforms": {
+    "linux-arm64": {
+      "binary": "claude",
+      "checksum": "80391942925c9b04603e4001d23c6dfabe432d62a613da5d014980da33c060f5",
+      "size": 1
+    },
+    "linux-x64": {
+      "binary": "claude",
+      "checksum": "0a50a3c0ac2f1c71e0aee1971e46a58478aa5f56658aa0b759490b94e63f716c",
+      "size": 1
+    },
+    "darwin-arm64": {
+      "binary": "claude",
+      "checksum": "ef9295612ef67607842a8cc56398330b5feb801a2b5839f745fb34e465097ede",
+      "size": 1
+    }
+  }
+}

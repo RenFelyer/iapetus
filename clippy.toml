@@ -1,0 +1,4 @@
+# В тестах unwrap, expect и panic — способ сказать «здесь не может быть ошибки».
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true

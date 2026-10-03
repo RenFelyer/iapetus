@@ -1,0 +1,18 @@
+/target/
+.env
+# Снимки insta, ждущие проверки.
+.*.pending-snap
+
+# Локальное состояние Claude Code: память, рабочие документы, задания агентам, их рабочие копии.
+/.claude/settings.local.json
+/.claude/memory/
+/.claude/docs/
+/.claude/brief/
+/.claude/worktrees/
+/.claude/archive/
+
+__pycache__/
+*.pyc
+
+# Семена упавших случаев proptest: при пути теста через `#[path]` proptest кладёт их рядом с `src/`.
+/*/src/**/tests/
